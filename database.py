@@ -103,10 +103,4 @@ def calculate_spending_by_category():
     for category,total in results:
         print(f"{category}:Ksh{total:.2f}")
 if __name__=="__main__":
-    print("\n Searching for food expenses:")
-    search_expenses_by_category("Food")
-    print("\n Calculate total spending:")
-    calculate_total_spending()
-    print("\n Calculae spending category: ")
-    calculate_spending_by_category()
     view_database_expense()
