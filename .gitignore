@@ -1,0 +1,22 @@
+
+# Private expense data
+expenses.json
+expenses.db
+expenses.db-journal
+expenses.db-wal
+expenses.db-shm
+budget.json
+category_budgets.json
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# Editor and system files
+.vscode/
+.DS_Store
+Thumbs.db
