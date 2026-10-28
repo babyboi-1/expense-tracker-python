@@ -1,3 +1,6 @@
+#Expense Tracker Application
+#Built with Python,JSON,and SQlite
+#Version control managed using git
 print("NEW VERSION OF EXPENSE TRACKER IS RUNNING")
 import json
 from datetime import date, datetime
