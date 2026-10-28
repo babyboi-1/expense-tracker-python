@@ -1,2 +1,2 @@
-print("My expense tracker")
-print("I am learning git")
+print("Version 2")
+print("Git is useful!")
