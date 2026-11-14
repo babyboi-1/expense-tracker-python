@@ -4,6 +4,8 @@
 print("NEW VERSION OF EXPENSE TRACKER IS RUNNING")
 import json
 from datetime import date, datetime
+import geocoder
+from geopy.geocoders import Nominatim
 from database import add_expense_to_database
 def display_menu():
     print("\n========EXPENSE TRACKER========")
@@ -22,6 +24,7 @@ def display_menu():
     print("13.Check category budgets.")
     print("14.Generate spending summary report")
     print("15.Add expense to SQlite!")
+    print("16.View spending by location.")
 def load_expenses():
     try:
         with open ("expenses.json","r",encoding="utf-8")as file:
@@ -70,11 +73,13 @@ def add_expense(expenses):
     if not category:
         print("Category cannot be empty.")
         return
+    g=geocoder.ip("me")
     expense = {
         "description": description,
         "amount": amount,
         "category": category,
-        "date":str(date.today())
+        "date":str(date.today()),
+        "location":g.address if g.ok else ""
     }
     expenses.append(expense)
     save_expenses(expenses)
@@ -88,9 +93,15 @@ def view_expenses(expenses):
         print(
             f"{number}. {expense['description']} | "
             f"KSh {expense['amount']:.2f} | "
-            f"{expense['category']}"
-            f"Date:{expense.get('date',"No date recorded")}"
+            f"{expense['category']} |"
+            f"Date:{expense.get('date',"No date recorded")} |"
         )
+    my_location=geocoder.ip("me")
+    if my_location.latlng:
+        print("Address:",my_location.address)
+        print("Coordinates:",my_location.latlng)
+    else:
+        print("Location unavailable")
 def edit_expense (expenses):
     if not expenses:
         print("No expenses available to edit.")
@@ -186,7 +197,51 @@ def valid_date(date_text):
         datetime.strptime(date_text,"%Y-%m-%d")
         return True
     except ValueError:
-        return False  
+        return False 
+def view_spending_location(expenses):
+    # Check whether there are any expenses to work with
+    if not expenses:
+        print("You have not recorded any expenses yet.")
+        return
+    geolocator = Nominatim(user_agent="expense_tracker")
+    # Ask the user to enter a location
+    location = input("Enter the location you want to check: ").strip()
+    if not location:
+        print("Please enter a location.")
+        return
+    # Find the coordinates of the location entered
+    searched_location = geolocator.geocode(location)
+    if not searched_location:
+        print("Sorry, the location could not be found.")
+        return
+    print("Location found:", searched_location.address)
+    total_spent = 0
+    expenses_found = False
+    # Go through each recorded expense
+    for expense in expenses:
+        saved_location = expense.get("location", "")
+        # Skip expenses that do not have a recorded location
+        if not saved_location:
+            continue
+        # Find the coordinates of the saved location
+        expense_location = geolocator.geocode(saved_location)
+        if expense_location:
+            # Compare the saved location with the searched location
+            latitude_difference = abs(
+                expense_location.latitude - searched_location.latitude
+            )
+            longitude_difference = abs(
+                expense_location.longitude - searched_location.longitude
+            )
+            # Include the expense if the locations are close enough
+            if latitude_difference < 0.05 and longitude_difference < 0.05:
+                total_spent += expense["amount"]
+                expenses_found = True
+    # Display the total amount spent
+    if expenses_found:
+        print(f"Your total spending around {location} is KSh {total_spent:.2f}")
+    else:
+        print(f"No recorded expenses were found around {location}.")
 def view_spending_by_date(expenses):
     if not expenses:
         print("No expenses recorded yet")
@@ -210,7 +265,7 @@ def view_spending_by_date(expenses):
         print(f"No expenses found for {selected_date}.")
 def load_category_budgets():
     try:
-        with open("category_budgets.json","r",encoding="utf=8")as file:
+        with open("category_budgets.json","r",encoding="utf-8")as file:
             return json.load(file)
     except FileNotFoundError:
         return{}
@@ -246,13 +301,13 @@ def check_category_budgets(expenses,category_budgets):
         spent=category_totals.get(category,0)
         remaining=budget-spent
         print(f"\nCategory:{category}")
-        print(f"Budget:Ksh{spent:.2f}")
+        print(f"Budget:Ksh{budget:.2f}")
         print(f"Spent: Ksh{spent:.2f}")
         print(f"Remaining:Ksh{remaining:.2f}")
-    if remaining < 0:
-        print("WARNING:Category budget exceeded!")
-    else:
-        print("You are within this category's budget")
+        if remaining < 0:
+            print("WARNING:Category budget exceeded!")
+        else:
+            print("You are within this category's budget")
 def check_budget(expenses,budget):
     total = sum(expense["amount"]for expense in expenses)
     print(f"Budget:KSh{budget:.2f}")
@@ -342,6 +397,7 @@ def main():
             view_total_spending(expenses)
         elif choice == "4":
             print("Goodbye!")
+            break
         elif choice == "5":
             delete_expense(expenses)
         elif choice == "6":
@@ -366,6 +422,8 @@ def main():
             generate_spending_report(expenses,budget)
         elif choice == "15":
             add_expense_sqlite()
+        elif choice == "16":
+            view_spending_location(expenses)
             break
         else:
             print("Invalid choice. Please try again.")
